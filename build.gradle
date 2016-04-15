@@ -1,0 +1,101 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven {
+            name = "forge"
+            url = "http://files.minecraftforge.net/maven"
+        }
+    }
+    dependencies {
+        classpath 'net.minecraftforge.gradle:ForgeGradle:2.1-SNAPSHOT'
+    }
+}
+
+apply plugin: 'net.minecraftforge.gradle.forge'
+apply plugin: 'java'
+apply plugin: 'maven'
+
+configurations {
+    deployerJars
+}
+
+/*
+repositories {
+	mavenLocal()
+    mavenCentral()
+    maven {
+        name = "chickenbones"
+        url = "http://chickenbones.net/maven/"
+    }
+}*/
+
+version = "${waila_version}_${mc_version}"
+group= "mcp.mobius.waila"
+archivesBaseName = "Waila"
+
+minecraft {
+    version = "${mc_version}-${forge_version}"
+	mappings = "snapshot_20151129"
+    runDir = "run"
+	
+    replace "@VERSION@", project.waila_version
+    replaceIn "Waila.java"
+}
+
+dependencies {
+    //deobfCompile "codechicken:CodeChickenLib:${mc_version}-${ccl_version}:dev"
+    //deobfCompile "codechicken:CodeChickenCore:${mc_version}-${ccc_version}:dev"
+    //deobfCompile "codechicken:NotEnoughItems:${mc_version}-${nei_version}:dev"
+    deployerJars "org.apache.maven.wagon:wagon-ssh:2.2"
+}
+
+processResources{
+    inputs.property "version", project.version
+    inputs.property "mcversion", project.minecraft.version
+
+    from(sourceSets.main.resources.srcDirs) {
+        include 'mcmod.info'
+                
+        expand 'version':project.waila_version, 'mcversion':project.minecraft.version
+    }
+	
+    from(sourceSets.main.resources.srcDirs) {
+        exclude 'mcmod.info'
+    }
+}
+
+jar { 
+    exclude "**/client/gui/inventory/GuiContainer.class" 
+    exclude "**/client/gui/inventory/GuiContainer.java" 
+}
+
+task devJar(type: Jar) {
+    from sourceSets.main.output
+    classifier = 'dev'
+}
+
+artifacts {
+    archives devJar
+}
+
+uploadArchives {
+	dependsOn 'build'
+    repositories.mavenDeployer {
+        configuration = configurations.deployerJars
+        repository(url: "scp://mobiusstrip.eu/home/mobius/web/maven"){
+            authentication(userName: "mobius")
+        }
+
+        pom {
+            groupId = project.group
+            version = project.version
+            artifactId = project.archivesBaseName
+            project {
+                name project.archivesBaseName
+                packaging 'jar'
+                description 'Waila '
+                url 'http://mobiusstrip.eu'        
+            }
+        }
+    }
+}
